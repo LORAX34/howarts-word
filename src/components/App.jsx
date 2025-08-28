@@ -8,6 +8,7 @@ function App() {
     const [paginaActual, setPaginaActual] = useState(1);
     const [busqueda, setBusqueda] = useState("");
     const [casaFiltro, setCasaFiltro] = useState("Todas");
+    const [orden, setOrden] = useState("nombre");
     const personajesPorPagina = 8;
 
     useEffect(() => {
@@ -25,27 +26,6 @@ function App() {
         };
         cargarPersonajes();
     }, []);
-
-    // Filtrar personajes según búsqueda y casa
-    const personajesFiltrados = personajes.filter((personaje) => {
-        const coincideNombre = personaje.name
-            .toLowerCase()
-            .includes(busqueda.toLowerCase());
-        const coincideCasa =
-            casaFiltro === "Todas" || personaje.house === casaFiltro;
-        return coincideNombre && coincideCasa;
-    });
-
-    // Paginación
-    const indiceUltimoPersonaje = paginaActual * personajesPorPagina;
-    const indicePrimerPersonaje = indiceUltimoPersonaje - personajesPorPagina;
-    const personajesActuales = personajesFiltrados.slice(
-        indicePrimerPersonaje,
-        indiceUltimoPersonaje,
-    );
-    const totalPaginas = Math.ceil(
-        personajesFiltrados.length / personajesPorPagina,
-    );
 
     // Función para obtener colores según la casa
     const getHouseColors = (house) => {
@@ -88,7 +68,50 @@ function App() {
         }
     };
 
-    // Formatear fecha
+    // Formatear fecha para ordenamiento
+    const formatDateForSort = (dateString) => {
+        if (!dateString) return new Date(0);
+        const [day, month, year] = dateString.split("-");
+        return new Date(`${year}-${month}-${day}`);
+    };
+
+    // Filtrar y ordenar personajes
+    const personajesFiltrados = personajes
+        .filter((personaje) => {
+            const coincideNombre = personaje.name
+                .toLowerCase()
+                .includes(busqueda.toLowerCase());
+            const coincideCasa =
+                casaFiltro === "Todas" || personaje.house === casaFiltro;
+            return coincideNombre && coincideCasa;
+        })
+        .sort((a, b) => {
+            switch (orden) {
+                case "nombre":
+                    return a.name.localeCompare(b.name);
+                case "casa":
+                    return (a.house || "").localeCompare(b.house || "");
+                case "fechaNacimiento":
+                    const dateA = formatDateForSort(a.dateOfBirth);
+                    const dateB = formatDateForSort(b.dateOfBirth);
+                    return dateA - dateB;
+                default:
+                    return 0;
+            }
+        });
+
+    // Paginación
+    const indiceUltimoPersonaje = paginaActual * personajesPorPagina;
+    const indicePrimerPersonaje = indiceUltimoPersonaje - personajesPorPagina;
+    const personajesActuales = personajesFiltrados.slice(
+        indicePrimerPersonaje,
+        indiceUltimoPersonaje,
+    );
+    const totalPaginas = Math.ceil(
+        personajesFiltrados.length / personajesPorPagina,
+    );
+
+    // Formatear fecha para visualización
     const formatDate = (dateString) => {
         if (!dateString) return "Desconocido";
         const [day, month, year] = dateString.split("-");
@@ -174,17 +197,23 @@ function App() {
                 </div>
 
                 {/* Información de resultados */}
-                <div className="mb-6 flex justify-between items-center">
+                <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <p className="text-gray-400">
                         Mostrando {personajesActuales.length} de{" "}
                         {personajesFiltrados.length} personajes
                     </p>
                     <div className="flex items-center space-x-2">
                         <span className="text-gray-400">Ordenar por:</span>
-                        <select className="px-3 py-1 bg-gray-700 rounded-lg">
-                            <option>Nombre</option>
-                            <option>Casa</option>
-                            <option>Fecha de nacimiento</option>
+                        <select
+                            value={orden}
+                            onChange={(e) => setOrden(e.target.value)}
+                            className="px-3 py-2 bg-gray-700 rounded-lg"
+                        >
+                            <option value="nombre">Nombre</option>
+                            <option value="casa">Casa</option>
+                            <option value="fechaNacimiento">
+                                Fecha de nacimiento
+                            </option>
                         </select>
                     </div>
                 </div>
@@ -207,11 +236,15 @@ function App() {
                                     setPersonajeSeleccionado(personaje)
                                 }
                             >
-                                <div className="h-48 overflow-hidden relative">
+                                <div className="h-48 overflow-hidden relative flex items-center justify-center bg-gray-700">
                                     <img
                                         src={personaje.image}
                                         alt={personaje.name}
-                                        className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                                        className="w-full h-full object-contain transition-transform duration-700 hover:scale-110"
+                                        onError={(e) => {
+                                            e.target.src =
+                                                "https://via.placeholder.com/300x400/2C3E50/ECF0F1?text=Imagen+no+disponible";
+                                        }}
                                     />
                                     <div className="absolute top-0 right-0 m-2">
                                         <span
@@ -334,7 +367,7 @@ function App() {
             {personajeSeleccionado && (
                 <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 animate-fade-in">
                     <div
-                        className="bg-gray-800 rounded-2xl overflow-hidden shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        className="bg-gray-800 rounded-2xl overflow-hidden shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto modal-scroll"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="relative">
@@ -345,13 +378,17 @@ function App() {
                                 <span className="text-white text-xl">×</span>
                             </button>
 
-                            <div
-                                className="h-48 md:h-64 bg-cover bg-center"
-                                style={{
-                                    backgroundImage: `url(${personajeSeleccionado.image})`,
-                                }}
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-80"></div>
+                            <div className="h-48 md:h-64 bg-gray-700 flex items-center justify-center">
+                                <img
+                                    src={personajeSeleccionado.image}
+                                    alt={personajeSeleccionado.name}
+                                    className="h-full w-auto object-contain"
+                                    onError={(e) => {
+                                        e.target.src =
+                                            "https://via.placeholder.com/300x400/2C3E50/ECF0F1?text=Imagen+no+disponible";
+                                    }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-70"></div>
                             </div>
 
                             <div className="absolute bottom-0 left-0 right-0 p-6">

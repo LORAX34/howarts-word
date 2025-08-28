@@ -109,11 +109,25 @@
     background: #718096;
 }
 
+/* Mejoras para imágenes */
+.object-contain {
+    object-fit: contain;
+}
+
+.object-cover {
+    object-fit: cover;
+}
+
 /* Responsive improvements */
 @media (max-width: 640px) {
     .container {
         padding-left: 1rem;
         padding-right: 1rem;
+    }
+
+    /* Ajustes para móviles */
+    .modal-scroll {
+        max-height: 85vh;
     }
 }
 
@@ -133,4 +147,15 @@
 
 ::-webkit-scrollbar-thumb:hover {
     background: #718096;
+}
+
+/* Estilos para el filtro de ordenamiento en móviles */
+@media (max-width: 480px) {
+    .flex-col {
+        flex-direction: column;
+    }
+
+    .flex-col > * {
+        margin-bottom: 0.5rem;
+    }
 }
